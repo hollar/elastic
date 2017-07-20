@@ -81,10 +81,17 @@ defmodule Elastic.HTTP do
   end
 
   def bulk(options) do
-    headers = Keyword.get(options, :headers, [])
+    url = build_url("_bulk")
+    headers =
+      options
+      |> Keyword.get(:headers, [])
+      |> Enum.concat(build_request_headers(:post, url))
+
     body = Keyword.get(options, :body, "") <> "\n"
-    options = Keyword.put(options, :body, body)
-    url = build_url(:post, "_bulk", headers, body)
+    options =
+      []
+      |> Keyword.put(:body, body)
+      |> Keyword.put(:headers, headers)
     HTTPotion.post(url, options) |> process_response
   end
 
@@ -92,14 +99,15 @@ defmodule Elastic.HTTP do
     Elastic.base_url || "http://localhost:9200"
   end
 
-  defp request(method, url, options) do
+  defp request(method, path, options) do
     body = Keyword.get(options, :body, []) |> encode_body
+    url = build_url(path)
+    request_headers = build_request_headers(method, url)
     options = options
     |> Keyword.put(:body, body)
     |> Keyword.put(:timeout, 30_000)
+    |> Keyword.put(:headers, request_headers)
 
-    headers = Keyword.get(options, :headers, [])
-    url = build_url(method, url, headers, body)
     apply(HTTPotion, method, [url, options]) |> process_response
   end
 
@@ -116,10 +124,13 @@ defmodule Elastic.HTTP do
     encoded_body
   end
 
-  defp build_url(method, url, headers, body) do
-    url = URI.merge(base_url(), url)
+  defp build_url(path) do
+    URI.merge(base_url(), path)
+  end
+
+  defp build_request_headers(method, url) do
     if AWS.enabled?,
-      do: AWS.sign_url(method, url, headers, body),
-      else: url
+      do: AWS.sign_headers(method, url),
+      else: []
   end
 end
