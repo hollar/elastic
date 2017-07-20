@@ -82,12 +82,12 @@ defmodule Elastic.HTTP do
 
   def bulk(options) do
     url = build_url("_bulk")
+    body = Keyword.get(options, :body, "") <> "\n"
     headers =
       options
       |> Keyword.get(:headers, [])
-      |> Enum.concat(build_request_headers(:post, url))
+      |> Enum.concat(build_request_headers(:post, url, body))
 
-    body = Keyword.get(options, :body, "") <> "\n"
     options =
       []
       |> Keyword.put(:body, body)
@@ -102,7 +102,7 @@ defmodule Elastic.HTTP do
   defp request(method, path, options) do
     body = Keyword.get(options, :body, []) |> encode_body
     url = build_url(path)
-    request_headers = build_request_headers(method, url)
+    request_headers = build_request_headers(method, url, body)
     options = options
     |> Keyword.put(:body, body)
     |> Keyword.put(:timeout, 30_000)
@@ -128,9 +128,9 @@ defmodule Elastic.HTTP do
     URI.merge(base_url(), path)
   end
 
-  defp build_request_headers(method, url) do
+  defp build_request_headers(method, url, body) do
     if AWS.enabled?,
-      do: AWS.sign_headers(method, url),
+      do: AWS.sign_headers(method, url, body),
       else: []
   end
 end

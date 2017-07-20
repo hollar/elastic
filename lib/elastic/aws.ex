@@ -5,14 +5,16 @@ defmodule Elastic.AWS do
     settings()[:enabled]
   end
 
-  def sign_headers(method, url) do
+  def sign_headers(method, url, payload) do
     AWSAuth.sign_authorization_header(
       settings().access_key_id,
       settings().secret_access_key,
       to_string(method),
       url,
       settings().region,
-      "es"
+      "es",
+      %{},
+      payload
     )
     |> build_signed_headers
   end
