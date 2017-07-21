@@ -5,27 +5,24 @@ defmodule Elastic.AWS do
     settings()[:enabled]
   end
 
-  def sign_url(method, url, headers, body) do
-    AWSAuth.sign_url(
+  def sign_headers(method, url, payload) do
+    AWSAuth.sign_authorization_header(
       settings().access_key_id,
       settings().secret_access_key,
       to_string(method),
       url,
       settings().region,
       "es",
-      process_headers(method, headers),
-      DateTime.utc_now |> DateTime.to_naive,
-      body
+      %{},
+      payload
     )
+    |> build_signed_headers
   end
 
-  # DELETE requests do not support headers
-  defp process_headers(:delete, _), do: %{}
-
-  defp process_headers(_method, headers) do
-    for {k, v} <- headers,
-      into: %{},
-      do: {to_string(k), to_string(v)}
+  defp build_signed_headers(headers) do
+    headers
+    |> Enum.into(%{})
+    |> Enum.map(fn({key, value}) -> {:"#{key}", value} end)
   end
 
   defp settings do
